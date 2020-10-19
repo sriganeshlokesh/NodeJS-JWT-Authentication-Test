@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWT</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.min.js" integrity="sha512-quHCp3WbBNkwLfYUMd+KwBAgpVukJu5MncuQaWXgCrfgcxCJAq/fo+oqrRKOj+UKEmyMCG3tb8RB63W+EmrOBg==" crossorigin="anonymous"></script>
+    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="row">Login</h1>
+
+        <main>
+            <div class="row">
+                <label for="username">Username</label>
+                <input type="text" name="username" id="username">
+            </div>
+            <div class="row">
+                <label for="password">Password</label>
+                <input type="password" name="password" id="password">
+            </div>
+
+            <div>
+                <button onclick="login()">Login</button>
+                <button onclick="getDashboard()">Get Dashboard</button>
+                <button onclick="getSettings()">Settings</button>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        function login(){
+            const data = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value,
+            }
+
+            axios.post('/api/login', data)
+            .then((res)=>{
+                document.getElementById('username').value = ''
+                document.getElementById('password').value = ''
+                if(res && res.data && res.data.success){
+                    const token = res.data.token
+                    localStorage.setItem('jwt', token)
+                    getDashboard()
+                }
+            })
+        }
+
+        function getDashboard(){
+            if(expire()){
+            const token = localStorage.getItem('jwt')
+            axios.get('/api/dashboard', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then((res)=>{
+                if(res && res.data && res.data.success){
+                    window.history.pushState(res.data.content, null, "api/dashboard")
+                    document.querySelector('h1.row').innerHTML = 'Dashboard'
+                    document.querySelector('main').innerHTML = res.data.content
+            
+                }
+            })
+            }
+        }
+
+        function getSettings(){
+            if(expire()){
+            const token = localStorage.getItem('jwt')
+            axios.get('/api/settings', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            }).then((res)=>{
+                if(res && res.data && res.data.success){
+                    window.history.pushState(res.data.content, null, "api/settings")
+                    document.querySelector('h1.row').innerHTML = 'Settings'
+                    document.querySelector('main').innerHTML = res.data.content
+                }
+            })
+            }
+        }
+
+        const parseJwt = (token) => {
+            try {
+                return JSON.parse(atob(token.split('.')[1]));
+            } catch (e) {
+                return null;
+            }
+        };
+
+        function expire(){
+            let token = localStorage.getItem('jwt')
+            if (token){
+                let payload = parseJwt(token)
+                if(Date.now() <= payload.exp * 1000){
+                    return true
+                }
+                else{
+                    localStorage.removeItem('jwt')
+                    window.location.href = "/"
+                }
+            }
+        }
+       setTimeout(()=>{
+           expire()
+       }, 190000)
+    </script>
+</body>
+</html>
